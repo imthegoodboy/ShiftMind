@@ -42,8 +42,7 @@ export default defineConfig(({ command, mode }) => {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],
-            utils: ['lucide-react'],
-            crypto: ['@ethersproject/providers']
+            utils: ['lucide-react']
           }
         }
       }
