@@ -148,18 +148,16 @@ class SwapManager {
     rate: number;
     strategyType: string;
   }) {
-    const { error } = await supabase.from('swap_transactions').insert({
-      user_id: data.userId,
+    // Write to simple history table keyed by wallet address to avoid RLS/UUID
+    const { error } = await supabase.from('swap_history').insert({
+      user_address: data.settleAddress,
       shift_id: data.shiftId,
       from_token: data.fromToken.toLowerCase(),
       to_token: data.toToken.toLowerCase(),
       from_amount: data.fromAmount,
       to_amount: data.toAmount,
-      from_chain: 'polygon',
-      to_chain: 'polygon',
-      settle_address: data.settleAddress,
-      rate: data.rate,
       status: 'pending',
+      profit_loss: 0,
       strategy_type: data.strategyType,
     });
 
@@ -174,10 +172,9 @@ class SwapManager {
     updates: Record<string, unknown>
   ) {
     const { error } = await supabase
-      .from('swap_transactions')
+      .from('swap_history')
       .update({
         ...updates,
-        updated_at: new Date().toISOString(),
       })
       .eq('shift_id', shiftId);
 

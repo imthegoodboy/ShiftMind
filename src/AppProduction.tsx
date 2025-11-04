@@ -58,6 +58,8 @@ function AppProduction() {
   const [page, setPage] = useState<'home' | 'swaps' | 'about' | 'settings'>('home');
   const [toggling, setToggling] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [defaultFrom, setDefaultFrom] = useState<string>(() => localStorage.getItem('default_from_token') || 'eth');
+  const [defaultTo, setDefaultTo] = useState<string>(() => localStorage.getItem('default_to_token') || 'btc');
 
   const updateState = useCallback((updates: Partial<AppState>) => {
     setState(prev => ({ ...prev, ...updates }));
@@ -319,8 +321,8 @@ function AppProduction() {
     try {
       const result = await swapManager.initiateSwap({
         userId: state.userProfile.id,
-        fromToken: signal.fromToken,
-        toToken: signal.toToken,
+        fromToken: defaultFrom || signal.fromToken,
+        toToken: defaultTo || signal.toToken,
         amount: 0.01,
         walletAddress: state.account,
         strategyType: state.strategyType,
