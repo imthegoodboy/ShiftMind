@@ -36,30 +36,85 @@ const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 500;
 
 async function fetchWithRetry(url: string): Promise<Response> {
-  let lastError: Error | null = null;
+  const cacheKey = `price_cache_${url}`;
+  const cacheExpiry = 30000; // 30 seconds cache
 
+  // Try to get from cache first
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp < cacheExpiry) {
+      return new Response(JSON.stringify(data), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  let error: Error | null = null;
   for (let i = 0; i < RETRY_ATTEMPTS; i++) {
     try {
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-      if (response.ok) return response;
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        // Cache the successful response
+        const data = await response.clone().json();
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+        return response;
+      }
+
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : RETRY_DELAY * Math.pow(2, i);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
 
       if (response.status >= 500 && i < RETRY_ATTEMPTS - 1) {
-        lastError = new Error(`Server error: ${response.status}`);
+        error = new Error(`CoinGecko API Error: ${response.status}`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, i)));
         continue;
       }
 
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Unknown error');
+      const errorText = await response.text();
+      error = new Error(`API Error: ${response.status} - ${errorText}`);
+      break;
+    } catch (err) {
+      error = err instanceof Error ? err : new Error('Unknown error');
+      if (err instanceof Error && err.name === 'AbortError') {
+        error = new Error('Request timeout - CoinGecko API is not responding');
+      }
       if (i < RETRY_ATTEMPTS - 1) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, i)));
       }
     }
   }
 
-  throw lastError || new Error('Failed after retries');
+  // If all retries failed, check if we have a stale cache
+  const staleCache = sessionStorage.getItem(cacheKey);
+  if (staleCache) {
+    console.warn('Using stale price cache due to API failure');
+    const { data } = JSON.parse(staleCache);
+    return new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  throw error || new Error('Unable to fetch price data. Please check your internet connection and try again.');
 }
 
 export async function getTokenPrices(symbols: string[]): Promise<Record<string, TokenPrice>> {

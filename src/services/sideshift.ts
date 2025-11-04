@@ -44,45 +44,60 @@ const RETRY_DELAY = 1000;
 
 async function fetchWithRetry(url: string, options?: RequestInit): Promise<Response> {
   let lastError: Error | null = null;
+  const apiUrl = import.meta.env.VITE_SIDESHIFT_API_URL || SIDESHIFT_API;
+
+  // Replace the hardcoded URL with the environment variable if it exists
+  const finalUrl = url.replace(SIDESHIFT_API, apiUrl);
 
   for (let i = 0; i < RETRY_ATTEMPTS; i++) {
     try {
-      const response = await fetch(url, {
+      const response = await fetch(finalUrl, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': window.location.origin,
           ...options?.headers,
         },
+        mode: 'cors',
       });
 
-      if (response.ok || response.status >= 400) {
-        return response;
-      }
-
-      if (response.status >= 500) {
-        lastError = new Error(`Server error: ${response.status}`);
-        if (i < RETRY_ATTEMPTS - 1) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, i)));
+      // Check if the response is JSON
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        // Parse the error response if it's JSON
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || `API Error: ${response.status} - ${response.statusText}`);
         }
-        continue;
       }
 
       return response;
     } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error');
+      console.error(`Attempt ${i + 1} failed:`, error);
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      
       if (i < RETRY_ATTEMPTS - 1) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, i)));
+        // Exponential backoff with jitter
+        const delay = RETRY_DELAY * Math.pow(2, i) * (0.5 + Math.random() * 0.5);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
 
-    // Provide a clearer network error message when fetch fails at runtime.
-    const message = lastError?.message || 'Failed after retries';
-    if (message.toLowerCase().includes('failed to fetch') || message.toLowerCase().includes('network')) {
-      throw new Error('Network error contacting SideShift API. Check your internet connection or CORS settings and try again.');
-    }
+  // Enhanced error handling with more specific messages
+  const message = lastError?.message || 'Failed after retries';
+  if (message.toLowerCase().includes('failed to fetch')) {
+    throw new Error('Network error: Unable to reach SideShift API. Please check your internet connection and try again.');
+  } else if (message.toLowerCase().includes('cors')) {
+    throw new Error('CORS error: The request was blocked. Please ensure you are using the correct API endpoint and have proper CORS headers.');
+  } else if (message.toLowerCase().includes('timeout')) {
+    throw new Error('Timeout error: The request took too long to complete. Please try again.');
+  } else if (message.toLowerCase().includes('rate limit')) {
+    throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
+  }
 
-    throw lastError || new Error('Failed after retries');
+  throw lastError || new Error('An unexpected error occurred while contacting the SideShift API.');
 }
 
 export async function getSupportedCoins(): Promise<SideShiftCoin[]> {
