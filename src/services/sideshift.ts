@@ -69,14 +69,20 @@ async function fetchWithRetry(url: string, options?: RequestInit): Promise<Respo
 
       return response;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Unknown error');
+        lastError = error instanceof Error ? error : new Error('Unknown error');
       if (i < RETRY_ATTEMPTS - 1) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, i)));
       }
     }
   }
 
-  throw lastError || new Error('Failed after retries');
+    // Provide a clearer network error message when fetch fails at runtime.
+    const message = lastError?.message || 'Failed after retries';
+    if (message.toLowerCase().includes('failed to fetch') || message.toLowerCase().includes('network')) {
+      throw new Error('Network error contacting SideShift API. Check your internet connection or CORS settings and try again.');
+    }
+
+    throw lastError || new Error('Failed after retries');
 }
 
 export async function getSupportedCoins(): Promise<SideShiftCoin[]> {

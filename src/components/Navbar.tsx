@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface NavbarProps {
-  currentPage: 'home' | 'swaps' | 'about' | 'settings';
-  onNavigate: (page: 'home' | 'swaps' | 'about' | 'settings') => void;
+  currentPage: 'home' | 'swaps' | 'about' | 'settings' | 'manual';
+  onNavigate: (page: 'home' | 'swaps' | 'about' | 'settings' | 'manual') => void;
   account: string | null;
 }
 
@@ -23,6 +23,7 @@ export default function Navbar({ currentPage, onNavigate, account }: NavbarProps
         <div className="hidden md:flex gap-2">
           <button className={`${linkBase} ${currentPage === 'home' ? active : inactive}`} onClick={() => onNavigate('home')}>Home</button>
           <button className={`${linkBase} ${currentPage === 'swaps' ? active : inactive}`} onClick={() => onNavigate('swaps')}>Swaps</button>
+          <button className={`${linkBase} ${currentPage === 'manual' ? active : inactive}`} onClick={() => onNavigate('manual')}>Manual Swap</button>
           <button className={`${linkBase} ${currentPage === 'about' ? active : inactive}`} onClick={() => onNavigate('about')}>About</button>
           <button className={`${linkBase} ${currentPage === 'settings' ? active : inactive}`} onClick={() => onNavigate('settings')}>Settings</button>
         </div>

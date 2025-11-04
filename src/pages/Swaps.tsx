@@ -9,6 +9,8 @@ interface SwapsPageProps {
   strategyType: 'safe' | 'balanced' | 'aggressive';
   autoSwapEnabled: boolean;
   onToggleAutoSwap: () => void;
+  onExecuteSignal?: () => void;
+  onReviewSignal?: () => void;
   signal: any;
   prices: Record<string, any>;
   portfolioValue: number;
@@ -40,6 +42,8 @@ export default function SwapsPage(props: SwapsPageProps) {
         strategyType={props.strategyType}
         autoSwapEnabled={props.autoSwapEnabled}
         onToggleAutoSwap={props.onToggleAutoSwap}
+        onExecuteSignal={props.onExecuteSignal}
+        onReviewSignal={props.onReviewSignal}
         signal={props.signal}
         prices={props.prices}
         portfolioValue={props.portfolioValue}

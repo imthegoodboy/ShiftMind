@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import WalletConnect from './components/WalletConnect';
 import StrategySelector from './components/StrategySelector';
 import Navbar from './components/Navbar';
+import ManualSwapModal from './components/ManualSwapModal';
 import SplashScreen from './components/SplashScreen';
 import HomePage from './pages/Home';
 import SwapsPage from './pages/Swaps';
@@ -55,7 +56,7 @@ function AppProduction() {
     error: null,
   });
   const [showSplash, setShowSplash] = useState(true);
-  const [page, setPage] = useState<'home' | 'swaps' | 'about' | 'settings'>('home');
+  const [page, setPage] = useState<'home' | 'swaps' | 'about' | 'settings' | 'manual'>('home');
   const [toggling, setToggling] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [defaultFrom, setDefaultFrom] = useState<string>(() => localStorage.getItem('default_from_token') || 'eth');
@@ -402,12 +403,33 @@ function AppProduction() {
             strategyType={state.strategyType as 'safe' | 'balanced' | 'aggressive'}
             autoSwapEnabled={state.autoSwapEnabled}
             onToggleAutoSwap={handleToggleAutoSwap}
+            onExecuteSignal={() => handleExecuteSignal()}
+            onReviewSignal={() => setReviewOpen(true)}
             signal={state.signal}
             prices={state.prices}
             portfolioValue={state.portfolioValue}
             totalProfit={state.totalProfit}
             swaps={state.swapHistory}
           />
+        )}
+
+        {page === 'manual' && (
+          // Manual swap page – reuse the modal UI in a dedicated page
+          <div className="py-6">
+            <h2 className="text-2xl font-bold text-white mb-4">Manual Swap</h2>
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10 text-gray-200">
+              <p className="text-sm text-gray-300 mb-4">Use this page to perform manual swaps. Select tokens and amount, then create a swap.</p>
+              <div>
+                {/* Render the modal component in-page so users have a full page manual swap UX */}
+                <ManualSwapModal
+                  isOpen={true}
+                  onClose={() => setPage('swaps')}
+                  walletAddress={state.account}
+                  strategyType={state.strategyType}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {page === 'about' && <AboutPage />}
