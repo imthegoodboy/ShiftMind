@@ -1,4 +1,13 @@
 const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+const FALLBACK_API = 'https://api.coingecko.com/api/v3'; // You can set up a fallback API if needed
+
+const DEBUG = true;
+
+const logDebug = (message: string, ...args: any[]) => {
+  if (DEBUG) {
+    console.log(`[Prices] ${message}`, ...args);
+  }
+};
 
 export interface TokenPrice {
   id: string;

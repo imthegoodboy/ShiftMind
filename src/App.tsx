@@ -3,6 +3,7 @@ import Hero from './components/Hero';
 import WalletConnect from './components/WalletConnect';
 import StrategySelector from './components/StrategySelector';
 import Dashboard from './components/Dashboard';
+import ErrorBoundary from './components/ErrorBoundary';
 import { connectWallet, getConnectedAccount, onAccountsChanged, removeAccountsChangedListener } from './services/wallet';
 import { supabase, UserStrategy, SwapHistory } from './lib/supabase';
 import { getTokenPrices, TokenPrice } from './services/prices';
@@ -217,8 +218,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-8">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto px-4 py-8">
         <div className="flex justify-end mb-8">
           <WalletConnect account={account} onConnect={handleConnect} isConnecting={isConnecting} />
         </div>
@@ -260,6 +262,7 @@ function App() {
         </footer>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
 

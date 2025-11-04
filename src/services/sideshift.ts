@@ -1,4 +1,13 @@
-const SIDESHIFT_API = 'https://api.sideshift.ai/v2';
+const SIDESHIFT_API = import.meta.env.VITE_SIDESHIFT_API_URL || 'https://api.sideshift.ai/v2';
+
+// Enable this to see detailed API debugging
+const DEBUG = true;
+
+const logDebug = (message: string, ...args: any[]) => {
+  if (DEBUG) {
+    console.log(`[SideShift] ${message}`, ...args);
+  }
+};
 
 export interface SideShiftCoin {
   coin: string;
@@ -49,9 +58,18 @@ async function fetchWithRetry(url: string, options?: RequestInit): Promise<Respo
   // Replace the hardcoded URL with the environment variable if it exists
   const finalUrl = url.replace(SIDESHIFT_API, apiUrl);
 
+  // Add optional proxy for development
+  const useProxy = import.meta.env.DEV && import.meta.env.VITE_USE_PROXY === 'true';
+  const proxyUrl = useProxy ? 'https://cors-anywhere.herokuapp.com/' : '';
+  const fetchUrl = useProxy ? `${proxyUrl}${finalUrl}` : finalUrl;
+
+  logDebug('Fetching URL:', fetchUrl);
+
   for (let i = 0; i < RETRY_ATTEMPTS; i++) {
     try {
-      const response = await fetch(finalUrl, {
+      logDebug(`Attempt ${i + 1}/${RETRY_ATTEMPTS}`);
+      
+      const response = await fetch(fetchUrl, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -60,6 +78,7 @@ async function fetchWithRetry(url: string, options?: RequestInit): Promise<Respo
           ...options?.headers,
         },
         mode: 'cors',
+        credentials: 'omit', // Important for CORS
       });
 
       // Check if the response is JSON
